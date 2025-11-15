@@ -59,5 +59,15 @@ const chart = new KLineChartPro({
 
 For more details, see [Overlay Persistence Documentation](docs/overlay-persistence.md).
 
+## Playground
+Quickly exercise the full charting experience locally with the bundled playground:
+
+```bash
+npm install
+npm run playground
+```
+
+The command launches a Vite dev server with a ready-to-use testing page where you can switch symbols, periods, timezone, locale, and theme without writing any extra code.
+
 ## ©️ License
 KLineChart Pro is available under the Apache License V2.

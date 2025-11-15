@@ -28,6 +28,8 @@
   "license": "Apache-2.0",
   "private": false,
   "scripts": {
+    "playground": "vite --config vite.playground.config.ts",
+    "playground:build": "vite build --config vite.playground.config.ts",
     "build-core": "tsc && vite build",
     "build-dts": "dts-bundle-generator --no-banner true --umd-module-name klinechartspro -o dist/index.d.ts src/index.ts",
     "build": "npm run build-core && npm run build-dts",
@@ -50,6 +52,7 @@
     "eslint-plugin-n": "^15.6.1",
     "eslint-plugin-promise": "^6.1.1",
     "gh-pages": "^5.0.0",
+    "klinecharts": "^9.8.12",
     "less": "^4.1.3",
     "less-loader": "^11.1.0",
     "typescript": "^4.9.5",
