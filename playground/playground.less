@@ -1,0 +1,88 @@
+@import '../src/base.less';
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #05060a;
+  color: #0f1115;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.playground {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #05060a 0%, #0f1115 35%, #121a24 100%);
+  color: #f5f7fb;
+}
+
+.playground__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  background: rgba(10, 12, 18, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playground__toolbar h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 16px 0 0;
+  color: #f5f7fb;
+}
+
+.playground__toolbar select,
+.playground__toolbar button {
+  height: 34px;
+  border-radius: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f7fb;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.playground__toolbar button {
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.playground__toolbar button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.playground__content {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 24px;
+}
+
+.playground__panel {
+  height: calc(100vh - 120px);
+  min-height: 520px;
+  border-radius: 16px;
+  background: rgba(5, 6, 10, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.playground__panel .klinecharts-pro {
+  height: 100%;
+}
+
+.playground__panel .klinecharts-pro[data-theme='dark'] {
+  background-color: #05060a;
+}
+
+.playground__panel .klinecharts-pro[data-theme='light'] {
+  background-color: #f8fafc;
+}

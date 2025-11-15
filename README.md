@@ -33,5 +33,15 @@ yarn add @klinecharts/pro
 + [中文](https://pro.klinecharts.com)
 + [English](https://pro.klinecharts.com/en-US)
 
+## Playground
+Quickly exercise the full charting experience locally with the bundled playground:
+
+```bash
+npm install
+npm run playground
+```
+
+The command launches a Vite dev server with a ready-to-use testing page where you can switch symbols, periods, timezone, locale, and theme without writing any extra code.
+
 ## ©️ License
 KLineChart Pro is available under the Apache License V2.
