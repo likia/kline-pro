@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup, onMount, type Component } from 'solid-js'
 
-import { KLineChartPro, type ChartPro, type SymbolInfo, type Period } from '../src'
+import { KLineChartPro, type ChartPro, type SymbolInfo, type Period, saveOverlaysToLocalStorage, loadOverlaysFromLocalStorage, clearOverlaysFromLocalStorage } from '../src'
 
 import MockDatafeed from './MockDatafeed'
 
@@ -48,6 +48,11 @@ const App: Component = () => {
       locale: locale(),
       theme: theme(),
       datafeed
+      ,
+      // enable overlay persistence in playground (uses localStorage by default)
+      overlayPersistence: {
+        enabled: true
+      }
     })
   })
 
@@ -115,6 +120,44 @@ const App: Component = () => {
     setTheme(theme() === 'light' ? 'dark' : 'light')
   }
 
+  const STORAGE_PREFIX = 'klinecharts-pro-overlays'
+
+  const showStoredData = () => {
+    const allData: Record<string, any> = {}
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(STORAGE_PREFIX)) {
+        try {
+          allData[key] = JSON.parse(localStorage.getItem(key) || '[]')
+        } catch (e) {
+          allData[key] = localStorage.getItem(key)
+        }
+      }
+    }
+    // show in simple alert for playground demo
+    alert(Object.keys(allData).length === 0 ? 'No stored overlay data found.' : JSON.stringify(allData, null, 2))
+  }
+
+  const clearCurrentSymbol = () => {
+    const ticker = symbol().ticker
+    if (confirm(`Clear all overlays for ${ticker}?`)) {
+      clearOverlaysFromLocalStorage(ticker)
+      alert('Cleared! Refresh the page to see the effect.')
+    }
+  }
+
+  const clearAllStorage = () => {
+    if (confirm('Clear all stored overlay data?')) {
+      const keys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(STORAGE_PREFIX)) keys.push(key)
+      }
+      keys.forEach(k => localStorage.removeItem(k))
+      alert('All cleared! Refresh the page to see the effect.')
+    }
+  }
+
   return (
     <div class="playground">
       <header class="playground__toolbar">
@@ -142,6 +185,9 @@ const App: Component = () => {
         <button type="button" onClick={toggleTheme}>
           {theme() === 'light' ? 'Switch Dark' : 'Switch Light'}
         </button>
+        <button type="button" onClick={showStoredData} style={{ 'margin-left': '8px' }}>Show Stored Data</button>
+        <button type="button" onClick={clearCurrentSymbol} style={{ 'margin-left': '8px' }}>Clear Current Symbol</button>
+        <button type="button" onClick={clearAllStorage} style={{ 'margin-left': '8px' }}>Clear All Storage</button>
       </header>
       <main class="playground__content">
         <div class="playground__panel">

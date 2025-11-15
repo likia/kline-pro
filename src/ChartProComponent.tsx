@@ -140,6 +140,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   const saveOverlays = () => {
+    debugger
     if (overlayPersistenceEnabled && overlayStorage) {
       const overlays = Array.from(overlayMap.values()).map(serializeOverlay)
       overlayStorage.save(overlays)
@@ -147,6 +148,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   const loadOverlays = () => {
+    debugger
     if (overlayPersistenceEnabled && overlayStorage && widget) {
       const overlays = overlayStorage.load()
       overlays.forEach(overlayData => {
