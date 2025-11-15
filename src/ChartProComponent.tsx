@@ -83,6 +83,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const overlayPersistenceEnabled = props.overlayPersistence?.enabled ?? false
   let overlayStorage: Nullable<OverlayStorage> = null
   const overlayMap = new Map<string, Overlay>()
+  let autoSaveIntervalId: Nullable<number> = null
 
   if (overlayPersistenceEnabled) {
     overlayStorage = new OverlayStorage(
@@ -140,10 +141,34 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   const saveOverlays = () => {
-    debugger
-    if (overlayPersistenceEnabled && overlayStorage) {
+    if (overlayPersistenceEnabled && overlayStorage && widget) {
+      // Refresh overlay data from widget before saving
+      overlayMap.forEach((_, id) => {
+        const overlay = widget!.getOverlayById(id)
+        if (overlay) {
+          overlayMap.set(id, overlay)
+        }
+      })
       const overlays = Array.from(overlayMap.values()).map(serializeOverlay)
       overlayStorage.save(overlays)
+    }
+  }
+
+  const startAutoSave = () => {
+    if (overlayPersistenceEnabled && !autoSaveIntervalId) {
+      // Auto-save every 2 seconds to capture drawing progress
+      autoSaveIntervalId = window.setInterval(() => {
+        if (overlayMap.size > 0) {
+          saveOverlays()
+        }
+      }, 2000) as unknown as number
+    }
+  }
+
+  const stopAutoSave = () => {
+    if (autoSaveIntervalId !== null) {
+      window.clearInterval(autoSaveIntervalId)
+      autoSaveIntervalId = null
     }
   }
 
@@ -153,13 +178,15 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       const overlays = overlayStorage.load()
       overlays.forEach(overlayData => {
         const overlayCreate = deserializeOverlay(overlayData)
-        const id = widget!.createOverlay(overlayCreate)
-        if (id) {
+        const result = widget!.createOverlay(overlayCreate)
+        // createOverlay can return a string or string array
+        const ids = Array.isArray(result) ? result.filter(id => id != null) as string[] : (result ? [result] : [])
+        ids.forEach(id => {
           const overlay = widget!.getOverlayById(id)
           if (overlay) {
             overlayMap.set(id, overlay)
           }
-        }
+        })
       })
     }
   }
@@ -169,7 +196,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       const overlay = widget.getOverlayById(id)
       if (overlay) {
         overlayMap.set(id, overlay)
-        saveOverlays()
+        // Auto-save will handle periodic saves
       }
     }
   }
@@ -177,7 +204,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const untrackOverlay = (id: string) => {
     if (overlayPersistenceEnabled) {
       overlayMap.delete(id)
-      saveOverlays()
+      saveOverlays() // Save immediately when removing
     }
   }
 
@@ -315,6 +342,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     // Load persisted overlays
     loadOverlays()
 
+    // Start auto-save for overlay persistence
+    startAutoSave()
+
     widget?.loadMore(timestamp => {
       loading = true
       const get = async () => {
@@ -365,6 +395,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   onCleanup(() => {
+    stopAutoSave()
     window.removeEventListener('resize', documentResize)
     dispose(widgetRef!)
   })
@@ -647,25 +678,24 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           <DrawingBar
             locale={props.locale}
             onDrawingItemClick={overlay => { 
-              const id = widget?.createOverlay(overlay)
-              if (id) {
-                trackOverlay(id)
+              const result = widget?.createOverlay(overlay)
+              // createOverlay can return a string or string array
+              if (result) {
+                const ids = Array.isArray(result) ? result.filter(id => id != null) as string[] : [result]
+                ids.forEach(id => trackOverlay(id))
               }
             }}
             onModeChange={mode => { 
               widget?.overrideOverlay({ mode: mode as OverlayMode })
-              // Save after mode change
-              setTimeout(() => saveOverlays(), 100)
+              // Auto-save will handle periodic saves
             }}
             onLockChange={lock => { 
               widget?.overrideOverlay({ lock })
-              // Save after lock change
-              setTimeout(() => saveOverlays(), 100)
+              // Auto-save will handle periodic saves
             }}
             onVisibleChange={visible => { 
               widget?.overrideOverlay({ visible })
-              // Save after visibility change
-              setTimeout(() => saveOverlays(), 100)
+              // Auto-save will handle periodic saves
             }}
             onRemoveClick={(groupId) => { 
               // Get all overlay IDs before removing
@@ -675,7 +705,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
               
               widget?.removeOverlay({ groupId })
               
-              // Untrack removed overlays
+              // Untrack removed overlays (this will trigger immediate save)
               overlaysToRemove.forEach(id => untrackOverlay(id))
             }}/>
         </Show>
