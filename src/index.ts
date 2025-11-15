@@ -23,6 +23,17 @@ import { load } from './i18n'
 
 import { Datafeed, SymbolInfo, Period, DatafeedSubscribeCallback, ChartProOptions, ChartPro } from './types'
 
+import {
+  OverlayStorage,
+  serializeOverlay,
+  deserializeOverlay,
+  saveOverlaysToLocalStorage,
+  loadOverlaysFromLocalStorage,
+  clearOverlaysFromLocalStorage
+} from './store'
+
+import type { SerializedOverlay, CloudSyncProvider } from './store'
+
 import './index.less'
 
 overlays.forEach(o => { registerOverlay(o) })
@@ -30,9 +41,16 @@ overlays.forEach(o => { registerOverlay(o) })
 export {
   DefaultDatafeed,
   KLineChartPro,
-  load as loadLocales
+  load as loadLocales,
+  OverlayStorage,
+  serializeOverlay,
+  deserializeOverlay,
+  saveOverlaysToLocalStorage,
+  loadOverlaysFromLocalStorage,
+  clearOverlaysFromLocalStorage
 }
 
 export type {
-  Datafeed, SymbolInfo, Period, DatafeedSubscribeCallback, ChartProOptions, ChartPro
+  Datafeed, SymbolInfo, Period, DatafeedSubscribeCallback, ChartProOptions, ChartPro,
+  SerializedOverlay, CloudSyncProvider
 }

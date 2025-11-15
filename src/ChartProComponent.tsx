@@ -15,8 +15,8 @@
 import { createSignal, createEffect, onMount, Show, onCleanup, startTransition, Component } from 'solid-js'
 
 import {
-  init, dispose, utils, Nullable, Chart, OverlayMode, Styles,
-  TooltipIconPosition, ActionType, PaneOptions, Indicator, DomPosition, FormatDateType
+  init, dispose, utils, Nullable, Chart, OverlayMode, Styles, Overlay,
+  TooltipIconPosition, ActionType, PaneOptions, Indicator, DomPosition, FormatDateType, OverlayCreate
 } from 'klinecharts'
 
 import lodashSet from 'lodash/set'
@@ -33,8 +33,14 @@ import { translateTimezone } from './widget/timezone-modal/data'
 
 import { SymbolInfo, Period, ChartProOptions, ChartPro } from './types'
 
-export interface ChartProComponentProps extends Required<Omit<ChartProOptions, 'container'>> {
+import { OverlayStorage, serializeOverlay, deserializeOverlay, CloudSyncProvider } from './store'
+
+export interface ChartProComponentProps extends Required<Omit<ChartProOptions, 'container' | 'overlayPersistence'>> {
   ref: (chart: ChartPro) => void
+  overlayPersistence?: {
+    enabled?: boolean
+    cloudSyncProvider?: CloudSyncProvider
+  }
 }
 
 interface PrevSymbolPeriod {
@@ -72,6 +78,18 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let priceUnitDom: HTMLElement
 
   let loading = false
+
+  // Overlay persistence
+  const overlayPersistenceEnabled = props.overlayPersistence?.enabled ?? false
+  let overlayStorage: Nullable<OverlayStorage> = null
+  const overlayMap = new Map<string, Overlay>()
+
+  if (overlayPersistenceEnabled) {
+    overlayStorage = new OverlayStorage(
+      props.symbol.ticker,
+      props.overlayPersistence?.cloudSyncProvider
+    )
+  }
 
   const [theme, setTheme] = createSignal(props.theme)
   const [styles, setStyles] = createSignal(props.styles)
@@ -119,6 +137,53 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   const documentResize = () => {
     widget?.resize()
+  }
+
+  const saveOverlays = () => {
+    if (overlayPersistenceEnabled && overlayStorage) {
+      const overlays = Array.from(overlayMap.values()).map(serializeOverlay)
+      overlayStorage.save(overlays)
+    }
+  }
+
+  const loadOverlays = () => {
+    if (overlayPersistenceEnabled && overlayStorage && widget) {
+      const overlays = overlayStorage.load()
+      overlays.forEach(overlayData => {
+        const overlayCreate = deserializeOverlay(overlayData)
+        const id = widget!.createOverlay(overlayCreate)
+        if (id) {
+          const overlay = widget!.getOverlayById(id)
+          if (overlay) {
+            overlayMap.set(id, overlay)
+          }
+        }
+      })
+    }
+  }
+
+  const trackOverlay = (id: string) => {
+    if (overlayPersistenceEnabled && widget) {
+      const overlay = widget.getOverlayById(id)
+      if (overlay) {
+        overlayMap.set(id, overlay)
+        saveOverlays()
+      }
+    }
+  }
+
+  const untrackOverlay = (id: string) => {
+    if (overlayPersistenceEnabled) {
+      overlayMap.delete(id)
+      saveOverlays()
+    }
+  }
+
+  const clearOverlays = () => {
+    if (overlayPersistenceEnabled) {
+      overlayMap.clear()
+      saveOverlays()
+    }
   }
 
   const adjustFromTo = (period: Period, toTimestamp: number, count: number) => {
@@ -244,6 +309,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       }
     })
     setSubIndicators(subIndicatorMap)
+
+    // Load persisted overlays
+    loadOverlays()
+
     widget?.loadMore(timestamp => {
       loading = true
       const get = async () => {
@@ -313,9 +382,20 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (!loading) {
       if (prev) {
         props.datafeed.unsubscribe(prev.symbol, prev.period)
+        // Clear overlays when symbol changes
+        if (overlayPersistenceEnabled && prev.symbol.ticker !== symbol().ticker) {
+          widget?.removeOverlay()
+          clearOverlays()
+        }
       }
       const s = symbol()
       const p = period()
+
+      // Update overlay storage symbol
+      if (overlayPersistenceEnabled && overlayStorage) {
+        overlayStorage.setSymbol(s.ticker)
+      }
+
       loading = true
       setLoadingVisible(true)
       const get = async () => {
@@ -325,6 +405,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         props.datafeed.subscribe(s, p, data => {
           widget?.updateData(data)
         })
+        // Load overlays for the new symbol
+        if (overlayPersistenceEnabled && prev && prev.symbol.ticker !== s.ticker) {
+          loadOverlays()
+        }
         loading = false
         setLoadingVisible(false)
       }
@@ -560,11 +644,38 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         <Show when={drawingBarVisible()}>
           <DrawingBar
             locale={props.locale}
-            onDrawingItemClick={overlay => { widget?.createOverlay(overlay) }}
-            onModeChange={mode => { widget?.overrideOverlay({ mode: mode as OverlayMode }) }}
-            onLockChange={lock => { widget?.overrideOverlay({ lock }) }}
-            onVisibleChange={visible => { widget?.overrideOverlay({ visible }) }}
-            onRemoveClick={(groupId) => { widget?.removeOverlay({ groupId }) }}/>
+            onDrawingItemClick={overlay => { 
+              const id = widget?.createOverlay(overlay)
+              if (id) {
+                trackOverlay(id)
+              }
+            }}
+            onModeChange={mode => { 
+              widget?.overrideOverlay({ mode: mode as OverlayMode })
+              // Save after mode change
+              setTimeout(() => saveOverlays(), 100)
+            }}
+            onLockChange={lock => { 
+              widget?.overrideOverlay({ lock })
+              // Save after lock change
+              setTimeout(() => saveOverlays(), 100)
+            }}
+            onVisibleChange={visible => { 
+              widget?.overrideOverlay({ visible })
+              // Save after visibility change
+              setTimeout(() => saveOverlays(), 100)
+            }}
+            onRemoveClick={(groupId) => { 
+              // Get all overlay IDs before removing
+              const overlaysToRemove = Array.from(overlayMap.values())
+                .filter(o => o.groupId === groupId)
+                .map(o => o.id)
+              
+              widget?.removeOverlay({ groupId })
+              
+              // Untrack removed overlays
+              overlaysToRemove.forEach(id => untrackOverlay(id))
+            }}/>
         </Show>
         <div
           ref={widgetRef}

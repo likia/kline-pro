@@ -14,6 +14,8 @@
 
 import { KLineData, Styles, DeepPartial, Chart } from 'klinecharts'
 
+import { CloudSyncProvider } from './store'
+
 export interface SymbolInfo {
   ticker: string
   name?: string
@@ -56,6 +58,10 @@ export interface ChartProOptions {
   mainIndicators?: string[]
   subIndicators?: string[]
   datafeed: Datafeed
+  overlayPersistence?: {
+    enabled?: boolean
+    cloudSyncProvider?: CloudSyncProvider
+  }
 }
 
 export interface ChartPro {
