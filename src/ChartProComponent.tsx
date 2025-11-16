@@ -173,7 +173,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   const loadOverlays = () => {
-    debugger
     if (overlayPersistenceEnabled && overlayStorage && widget) {
       const overlays = overlayStorage.load()
       overlays.forEach(overlayData => {

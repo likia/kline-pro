@@ -3673,7 +3673,6 @@ const Nu = (e) => {
   }, $5 = () => {
     l !== null && (window.clearInterval(l), l = null);
   }, V0 = () => {
-    debugger;
     s && o && n && o.load().forEach((y) => {
       const v = Tu(y), p = n.createOverlay(v);
       (Array.isArray(p) ? p.filter((j) => j != null) : p ? [p] : []).forEach((j) => {
