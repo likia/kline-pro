@@ -53,11 +53,11 @@ export function serializeOverlay (overlay: Overlay): SerializedOverlay {
     id: overlay.id,
     groupId: overlay.groupId,
     name: overlay.name,
-    points: overlay.points.map(p => ({
-      timestamp: p.timestamp,
-      dataIndex: p.dataIndex,
-      value: p.value
-    })),
+    points: overlay.points.map(p => {
+      // Use spread operator to preserve all point properties
+      // This ensures timestamp is always captured when available
+      return { ...p }
+    }),
     lock: overlay.lock,
     visible: overlay.visible,
     mode: overlay.mode,
