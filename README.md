@@ -33,6 +33,32 @@ yarn add @klinecharts/pro
 + [中文](https://pro.klinecharts.com)
 + [English](https://pro.klinecharts.com/en-US)
 
+## Features
++ 📈 Built on [KLineChart](https://github.com/klinecharts/KLineChart) - powerful and flexible
++ 🎨 Drawing tools with persistence support - save and restore user drawings
++ 💾 localStorage + Cloud sync - drawings persist across sessions with symbol isolation
++ 🌐 Internationalization (i18n) support
++ 🎯 TypeScript support
++ 📱 Responsive design
+
+## Quick Example
+```typescript
+import { KLineChartPro } from '@klinecharts/pro'
+
+const chart = new KLineChartPro({
+  container: 'chart',
+  symbol: { ticker: 'AAPL' },
+  period: { multiplier: 1, timespan: 'day', text: '1D' },
+  datafeed: yourDatafeed,
+  // Enable drawing persistence
+  overlayPersistence: {
+    enabled: true
+  }
+})
+```
+
+For more details, see [Overlay Persistence Documentation](docs/overlay-persistence.md).
+
 ## Playground
 Quickly exercise the full charting experience locally with the bundled playground:
 

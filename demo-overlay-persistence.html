@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLineChart Pro - Overlay Persistence Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .info {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .info h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .info p {
+      margin-bottom: 8px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .info code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #d63384;
+    }
+
+    .controls {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .controls button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1677ff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .controls button:hover {
+      background: #0958d9;
+    }
+
+    .controls button.danger {
+      background: #ff4d4f;
+    }
+
+    .controls button.danger:hover {
+      background: #cf1322;
+    }
+
+    .controls select {
+      padding: 10px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    #chart {
+      width: 100%;
+      height: 600px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .status h3 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .status pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Overlay Persistence Demo</h1>
+    
+    <div class="info">
+      <h2>📖 Instructions</h2>
+      <p>1. <strong>Draw overlays</strong>: Click the drawing toolbar below the chart and draw some shapes on the chart.</p>
+      <p>2. <strong>Auto-save</strong>: Your drawings are automatically saved to <code>localStorage</code> after each change.</p>
+      <p>3. <strong>Refresh page</strong>: Reload the page and see your drawings restored automatically.</p>
+      <p>4. <strong>Switch symbols</strong>: Change the symbol to see symbol-based isolation - each symbol has its own set of drawings.</p>
+      <p>5. <strong>Storage key format</strong>: <code>klinecharts-pro-overlays-{symbol}</code></p>
+    </div>
+
+    <div class="controls">
+      <select id="symbolSelect">
+        <option value="AAPL">AAPL</option>
+        <option value="GOOGL">GOOGL</option>
+        <option value="MSFT">MSFT</option>
+        <option value="TSLA">TSLA</option>
+        <option value="BTCUSDT">BTCUSDT</option>
+      </select>
+      <button onclick="loadStoredData()">📊 Show Stored Data</button>
+      <button onclick="clearCurrentSymbol()" class="danger">🗑️ Clear Current Symbol</button>
+      <button onclick="clearAllStorage()" class="danger">🗑️ Clear All Storage</button>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="status">
+      <h3>Storage Status</h3>
+      <pre id="storageStatus">Loading...</pre>
+    </div>
+  </div>
+
+  <script type="module">
+    // Mock datafeed for demo purposes
+    const mockDatafeed = {
+      searchSymbols: async (search) => {
+        return [
+          { ticker: 'AAPL', name: 'Apple Inc.' },
+          { ticker: 'GOOGL', name: 'Alphabet Inc.' },
+          { ticker: 'MSFT', name: 'Microsoft Corporation' },
+          { ticker: 'TSLA', name: 'Tesla, Inc.' },
+          { ticker: 'BTCUSDT', name: 'Bitcoin / Tether' }
+        ]
+      },
+      getHistoryKLineData: async (symbol, period, from, to) => {
+        // Generate mock data
+        const data = []
+        const dayMs = 24 * 60 * 60 * 1000
+        const count = Math.floor((to - from) / dayMs)
+        let price = 100 + Math.random() * 100
+
+        for (let i = 0; i < count; i++) {
+          const timestamp = from + i * dayMs
+          const open = price
+          const change = (Math.random() - 0.5) * 10
+          const close = open + change
+          const high = Math.max(open, close) + Math.random() * 5
+          const low = Math.min(open, close) - Math.random() * 5
+          const volume = Math.floor(Math.random() * 1000000)
+
+          data.push({
+            timestamp,
+            open,
+            high,
+            low,
+            close,
+            volume
+          })
+
+          price = close
+        }
+
+        return data
+      },
+      subscribe: (symbol, period, callback) => {
+        // No real-time data in this demo
+      },
+      unsubscribe: (symbol, period) => {
+        // No real-time data in this demo
+      }
+    }
+
+    // Note: In a real application, you would import from the package:
+    // import { KLineChartPro } from '@klinecharts/pro'
+    // 
+    // For this demo, you need to build the package and include it:
+    // <script src="../dist/klinecharts-pro.umd.js"></script>
+    // <link rel="stylesheet" href="../dist/klinecharts-pro.css">
+
+    console.log('📝 Demo Note: This demo requires the KLineChart Pro library to be built and included.')
+    console.log('   Run: npm run build')
+    console.log('   Then include: dist/klinecharts-pro.umd.js and dist/klinecharts-pro.css')
+
+    // Create chart with persistence enabled
+    let chart
+    let currentSymbol = 'AAPL'
+
+    function initChart() {
+      // Check if KLineChartPro is available
+      if (typeof klinechartspro === 'undefined') {
+        document.getElementById('chart').innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999; flex-direction: column;">
+            <p style="margin-bottom: 10px;">⚠️ KLineChart Pro library not loaded</p>
+            <p style="font-size: 12px;">Please build the project: <code style="background: #f0f0f0; padding: 2px 6px;">npm run build</code></p>
+            <p style="font-size: 12px; margin-top: 5px;">Then include the built files in this HTML</p>
+          </div>
+        `
+        return
+      }
+
+      chart = new klinechartspro.KLineChartPro({
+        container: 'chart',
+        symbol: { ticker: currentSymbol, name: currentSymbol },
+        period: { multiplier: 1, timespan: 'day', text: '1D' },
+        datafeed: mockDatafeed,
+        // Enable overlay persistence
+        overlayPersistence: {
+          enabled: true
+        }
+      })
+
+      updateStorageStatus()
+    }
+
+    function updateStorageStatus() {
+      const allKeys = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('klinecharts-pro-overlays-')) {
+          allKeys.push(key)
+        }
+      }
+
+      if (allKeys.length === 0) {
+        document.getElementById('storageStatus').textContent = 'No stored overlay data found.'
+        return
+      }
+
+      const status = allKeys.map(key => {
+        const data = localStorage.getItem(key)
+        const overlays = JSON.parse(data || '[]')
+        return `${key}: ${overlays.length} overlay(s)`
+      }).join('\n')
+
+      document.getElementById('storageStatus').textContent = status
+    }
+
+    window.loadStoredData = function() {
+      const allData = {}
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('klinecharts-pro-overlays-')) {
+          const data = localStorage.getItem(key)
+          allData[key] = JSON.parse(data || '[]')
+        }
+      }
+
+      document.getElementById('storageStatus').textContent = JSON.stringify(allData, null, 2)
+    }
+
+    window.clearCurrentSymbol = function() {
+      if (confirm(`Clear all overlays for ${currentSymbol}?`)) {
+        const key = `klinecharts-pro-overlays-${currentSymbol}`
+        localStorage.removeItem(key)
+        alert('Cleared! Refresh the page to see the effect.')
+        updateStorageStatus()
+      }
+    }
+
+    window.clearAllStorage = function() {
+      if (confirm('Clear all stored overlay data?')) {
+        const keys = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith('klinecharts-pro-overlays-')) {
+            keys.push(key)
+          }
+        }
+        keys.forEach(key => localStorage.removeItem(key))
+        alert('All cleared! Refresh the page to see the effect.')
+        updateStorageStatus()
+      }
+    }
+
+    // Handle symbol change
+    document.getElementById('symbolSelect').addEventListener('change', (e) => {
+      currentSymbol = e.target.value
+      if (chart) {
+        chart.setSymbol({ ticker: currentSymbol, name: currentSymbol })
+        setTimeout(updateStorageStatus, 500)
+      }
+    })
+
+    // Initialize when page loads
+    window.addEventListener('load', () => {
+      initChart()
+      // Update status periodically
+      setInterval(updateStorageStatus, 2000)
+    })
+  </script>
+</body>
+</html>
